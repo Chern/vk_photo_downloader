@@ -1,3 +1,4 @@
+import multiprocessing
 import requests
 import sys
 from os import path, makedirs
@@ -44,6 +45,17 @@ def get_download_dir(dir_path, subdir=None):
     return abs_path
 
 
+def downloader(bits):
+    pos, url, pos_len, download_dir = bits
+    response = requests.get(url, stream=True)
+    ext = url.split('.')[-1]
+    pos = str(pos + 1).rjust(pos_len, '0')
+    file_name = '{}/{}.{}'.format(download_dir, pos, ext)
+    with open(file_name, 'wb') as f:
+        for chunk in response.iter_content(1024):
+            f.write(chunk)
+
+
 if __name__ == '__main__':
     parser = create_parser()
     args = parser.parse_args()
@@ -70,6 +82,7 @@ if __name__ == '__main__':
                 print(u'{id}\t{title}'.format(**album))
             sys.exit(0)
 
+        queue = []
         for down_album in args.album:
             valid = False
             for album in albums['items']:
@@ -88,23 +101,17 @@ if __name__ == '__main__':
                 pos_len = len(str(photos_count))
                 photo_suffixes = ['2560', '1280', '807', '604', '130', '75']
 
-                for pos_raw, photo in enumerate(photos['items']):
-                    sys.stdout.write('\rDownloading {} of {}'.format(
-                        pos_raw + 1, photos_count))
-                    sys.stdout.flush()
+                for pos, photo in enumerate(photos['items']):
                     for suffix in photo_suffixes:
                         key = 'photo_{}'.format(suffix)
                         if key in photo:
-                            photo_url = photo[key]
-                            response = requests.get(photo_url, stream=True)
-                            ext = photo_url.split('.')[-1]
-                            pos = str(pos_raw + 1).rjust(pos_len, '0')
-                            file_name = '{}/{}.{}'.format(download_dir,
-                                                          pos, ext)
-                            with open(file_name, 'wb') as f:
-                                for chunk in response.iter_content(1024):
-                                    f.write(chunk)
+                            queue.append(
+                                (pos, photo[key], pos_len, download_dir)
+                            )
                             break
-                print('\n')
             else:
                 print('Wrong album id {}'.format(down_album))
+
+        if queue:
+            pool = multiprocessing.Pool()
+            pool.map(downloader, queue)
