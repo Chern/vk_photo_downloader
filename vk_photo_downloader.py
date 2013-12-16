@@ -10,7 +10,9 @@ class VKException(Exception):
 
 
 def request_api(method, params={}):
-    response = requests.get('{}/{}'.format(API_URL, method), params=params)
+    req_params = {'v': '5.5'}
+    req_params.update(params)
+    response = requests.get('{}/{}'.format(API_URL, method), params=req_params)
     data = response.json()
     if 'error' in data:
         raise VKException('Code - {error_code}. Message - {error_msg}'.format(
@@ -55,10 +57,9 @@ if __name__ == '__main__':
     except VKException:
         print('Can\'t find owner with name or id {}'.format(args.owner))
     else:
-        if args.source_is_user:
-            owner_id = owner_info['uid']
-        else:
-            owner_id = '-{}'.format(owner_info['gid'])
+        owner_id = owner_info['id']
+        if not args.source_is_user:
+            owner_id = '-{}'.format(owner_id)
 
         albums = request_api('photos.getAlbums', params={'owner_id': owner_id})
         download_dir = get_download_dir(args.path)
@@ -67,14 +68,14 @@ if __name__ == '__main__':
         if not args.album:
             print('Album list\n\nid\t\ttitle')
             print('-' * 80)
-            for album in albums:
-                print(u'{aid}\t{title}'.format(**album))
+            for album in albums['items']:
+                print(u'{id}\t{title}'.format(**album))
             sys.exit(0)
 
         for down_album in args.album:
             valid = False
-            for album in albums:
-                if down_album == album['aid']:
+            for album in albums['items']:
+                if down_album == album['id']:
                     valid = True
                     break
             if valid:
@@ -88,17 +89,16 @@ if __name__ == '__main__':
                     'photos.get',
                     params={'owner_id': owner_id, 'album_id': down_album}
                 )
-                photos_count = len(photos)
+                photos_count = photos['count']
                 pos_len = len(str(photos_count))
-                photo_suffixes = ['_xxxbig', '_xxbig', '_xbig',
-                                  '_big', '_small', '']
+                photo_suffixes = ['2560', '1280', '807', '604', '130', '75']
 
-                for pos_raw, photo in enumerate(photos):
+                for pos_raw, photo in enumerate(photos['items']):
                     sys.stdout.write('\rDownloading {} of {}'.format(
                         pos_raw + 1, photos_count))
                     sys.stdout.flush()
                     for suffix in photo_suffixes:
-                        key = 'src{}'.format(suffix)
+                        key = 'photo_{}'.format(suffix)
                         if key in photo:
                             photo_url = photo[key]
                             response = requests.get(photo_url, stream=True)
