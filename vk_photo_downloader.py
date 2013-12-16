@@ -62,8 +62,6 @@ if __name__ == '__main__':
             owner_id = '-{}'.format(owner_id)
 
         albums = request_api('photos.getAlbums', params={'owner_id': owner_id})
-        download_dir = get_download_dir(args.path)
-        print('Saving to {}...'.format(download_dir))
 
         if not args.album:
             print('Album list\n\nid\t\ttitle')
@@ -80,11 +78,8 @@ if __name__ == '__main__':
                     break
             if valid:
                 print('Downloading {}'.format(down_album))
-                if len(args.album) > 1:
-                    current_download_dir = get_download_dir(download_dir,
-                                                            str(down_album))
-                else:
-                    current_download_dir = download_dir
+                download_dir = get_download_dir(args.path, str(down_album))
+                print('Saving to {}...'.format(download_dir))
                 photos = request_api(
                     'photos.get',
                     params={'owner_id': owner_id, 'album_id': down_album}
