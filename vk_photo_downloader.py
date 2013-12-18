@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 import multiprocessing
 import requests
 import sys
