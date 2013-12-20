@@ -26,13 +26,13 @@ def request_api(method, params={}):
 def create_parser():
     import argparse
     parser = argparse.ArgumentParser()
-    parser.add_argument('owner', help='Owner name or id')
-    parser.add_argument('-u', help='Owner is user', action='store_true',
+    parser.add_argument('owner', help='owner name or id')
+    parser.add_argument('-u', help='owner is user', action='store_true',
                         dest='source_is_user')
     parser.add_argument('-a', '--album', nargs='*', type=int,
-                        help='Specify album id to download')
+                        help='specify album ids to download. if it is empty, user albums list will be printed')
     parser.add_argument('-p', '--path',
-                        help='Specify path to save photos',
+                        help='specify path to save photos',
                         default=path.join(path.dirname(path.abspath(__file__)),
                                           'download/'))
     return parser
