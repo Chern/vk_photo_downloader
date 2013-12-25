@@ -2,7 +2,6 @@
 
 import multiprocessing
 import requests
-import sys
 from os import path, makedirs
 
 API_URL = 'https://api.vk.com/method'
@@ -58,34 +57,31 @@ def downloader(bits):
             f.write(chunk)
 
 
-if __name__ == '__main__':
-    parser = create_parser()
-    args = parser.parse_args()
-
-    req_args, req_kwargs = ('groups.getById', ), {'params': {'group_id': args.owner}}
-    if args.source_is_user:
-        req_args, req_kwargs = ('users.get', ), {'params': {'user_ids': args.owner}}
+def download_photos(**kwargs):
+    req_args, req_kwargs = ('groups.getById', ), {'params': {'group_id': kwargs['owner']}}
+    if kwargs['source_is_user']:
+        req_args, req_kwargs = ('users.get', ), {'params': {'user_ids': kwargs['owner']}}
 
     try:
         owner_info = request_api(*req_args, **req_kwargs)[0]
     except VKException:
-        print('Can\'t find owner with name or id {}'.format(args.owner))
+        print('Can\'t find owner with name or id {}'.format(kwargs['owner']))
     else:
         owner_id = owner_info['id']
-        if not args.source_is_user:
+        if not kwargs['source_is_user']:
             owner_id = '-{}'.format(owner_id)
 
         albums = request_api('photos.getAlbums', params={'owner_id': owner_id})
 
-        if not args.album:
+        if not kwargs['album']:
             print('Album list\n\nid\t\ttitle')
             print('-' * 80)
             for album in albums['items']:
                 print(u'{id}\t{title}'.format(**album))
-            sys.exit(0)
+            return
 
         queue = []
-        for down_album in args.album:
+        for down_album in kwargs['album']:
             valid = False
             for album in albums['items']:
                 if down_album == album['id']:
@@ -93,7 +89,7 @@ if __name__ == '__main__':
                     break
             if valid:
                 print('Downloading {}'.format(down_album))
-                download_dir = get_download_dir(args.path, str(down_album))
+                download_dir = get_download_dir(kwargs['path'], str(down_album))
                 print('Saving to {}...'.format(download_dir))
                 photos = request_api(
                     'photos.get',
@@ -117,3 +113,9 @@ if __name__ == '__main__':
         if queue:
             pool = multiprocessing.Pool()
             pool.map(downloader, queue)
+
+
+if __name__ == '__main__':
+    parser = create_parser()
+    args = parser.parse_args()
+    download_photos(**vars(args))
