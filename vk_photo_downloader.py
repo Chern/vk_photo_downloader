@@ -5,15 +5,17 @@ import requests
 from os import path, makedirs
 
 API_URL = 'https://api.vk.com/method'
+API_VERSION = '5.5'
 
 
 class VKException(Exception):
     pass
 
 
-def request_api(method, params={}):
-    req_params = {'v': '5.5'}
-    req_params.update(params)
+def request_api(method, params=None):
+    req_params = {'v': API_VERSION}
+    if params is not None:
+        req_params.update(params)
     response = requests.get('{}/{}'.format(API_URL, method), params=req_params)
     data = response.json()
     if 'error' in data:
@@ -58,12 +60,12 @@ def downloader(bits):
 
 
 def download_photos(**kwargs):
-    req_args, req_kwargs = ('groups.getById', ), {'params': {'group_id': kwargs['owner']}}
+    method, params = 'groups.getById', {'group_id': kwargs['owner']}
     if kwargs['source_is_user']:
-        req_args, req_kwargs = ('users.get', ), {'params': {'user_ids': kwargs['owner']}}
+        method, params = 'users.get', {'user_ids': kwargs['owner']}
 
     try:
-        owner_info = request_api(*req_args, **req_kwargs)[0]
+        owner_info = request_api(method, params=params)[0]
     except VKException:
         print('Can\'t find owner with name or id {}'.format(kwargs['owner']))
     else:
