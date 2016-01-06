@@ -79,7 +79,10 @@ def download_photos(**kwargs):
             print('Album list\n\nid\t\ttitle')
             print('-' * 80)
             for album in albums['items']:
-                print(u'{id}\t{title}'.format(**album))
+                try:
+                    print(u'{id}\t{title}'.format(**album))
+                except UnicodeEncodeError:
+                    print(u'{id}\tUNKNOWN TITLE'.format(**album))
             return
 
         queue = []
