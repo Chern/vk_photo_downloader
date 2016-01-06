@@ -61,10 +61,10 @@ def get_download_dir(dir_path, subdir=None):
 
 
 def downloader(bits):
-    pos, url, pos_len, download_dir = bits
+    _id, url, max_digits, download_dir = bits
     response = requests.get(url, stream=True)
     ext = url.split('.')[-1]
-    pos = str(pos + 1).rjust(pos_len, '0')
+    pos = str(_id + 1).rjust(max_digits, '0')
     file_name = u'{}/{}.{}'.format(download_dir, pos, ext)
     with open(file_name, 'wb') as f:
         for chunk in response.iter_content(1024):
@@ -122,12 +122,12 @@ def download_photos(**kwargs):
             photos = request_api('photos.get', params={'owner_id': owner_id, 'album_id': album_id, 'photo_sizes': 1})
 
             photos_count = photos['count']
-            pos_len = len(str(photos_count))
+            max_digits = len(str(photos_count))
 
             for _id, photo in enumerate(photos['items']):
                 sizes = photo['sizes']
                 sizes.sort(key=lambda x: SIZE_WEIGHTS.get(x['type'], 0), reverse=True)
-                queue.append((_id, sizes[0]['src'], pos_len, download_dir))
+                queue.append((_id, sizes[0]['src'], max_digits, download_dir))
 
         if queue:
             pool = multiprocessing.Pool()
