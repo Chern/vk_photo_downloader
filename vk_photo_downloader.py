@@ -82,12 +82,7 @@ def download_photos(**kwargs):
 
         queue = []
         for down_album in kwargs['album']:
-            valid = False
-            for album in albums['items']:
-                if down_album == album['id']:
-                    valid = True
-                    break
-            if valid:
+            if any(down_album == album['id'] for album in albums['items']):
                 print('Downloading {}'.format(down_album))
                 download_dir = get_download_dir(kwargs['path'], str(down_album))
                 print('Saving to {}...'.format(download_dir))
