@@ -1,7 +1,9 @@
 #!/usr/bin/env python
 
+import argparse
 import multiprocessing
 import requests
+import sys
 from os import path, makedirs
 
 API_URL = 'https://api.vk.com/method'
@@ -25,9 +27,8 @@ def request_api(method, params=None):
 
 
 def create_parser():
-    import argparse
     parser = argparse.ArgumentParser()
-    parser.add_argument('owner', help='owner name or id')
+    parser.add_argument('owner', help='owner name or id', type=lambda x: x.decode(sys.getfilesystemencoding()))
     parser.add_argument('-u', help='owner is user', action='store_true',
                         dest='source_is_user')
     parser.add_argument('-a', '--album', nargs='*', type=int,
@@ -67,7 +68,7 @@ def download_photos(**kwargs):
     try:
         owner_info = request_api(method, params=params)[0]
     except VKException:
-        print('Can\'t find owner with name or id {}'.format(kwargs['owner']))
+        print(u'Can\'t find owner with name or id {}'.format(kwargs['owner']))
     else:
         owner_id = owner_info['id']
         if not kwargs['source_is_user']:
@@ -116,6 +117,6 @@ def download_photos(**kwargs):
 
 
 if __name__ == '__main__':
-    parser = create_parser()
-    args = parser.parse_args()
+    args_parser = create_parser()
+    args = args_parser.parse_args()
     download_photos(**vars(args))
