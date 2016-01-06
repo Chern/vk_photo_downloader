@@ -31,10 +31,12 @@ def decode_input(value):
 
 def create_parser():
     parser = argparse.ArgumentParser()
-    parser.add_argument('owner', help='owner name or id', type=decode_input)
-    parser.add_argument('-u', help='owner is user', action='store_true', dest='source_is_user')
-    parser.add_argument('-a', '--album', nargs='*', type=int,
-                        help='specify album ids to download. if it is empty, user albums list will be printed')
+    parser.add_argument('owner', help='name or id of user or community', type=decode_input)
+    parser.add_argument('-u', help='specify that owner is user', action='store_true', dest='source_is_user')
+    parser.add_argument('-a', '--albums', nargs='*', type=int,
+                        help='specify album ids to download. if it is empty and `--download-all` is not provided, '
+                             'user albums list will be printed')
+    parser.add_argument('--download-all', help='download all available photos', action='store_true')
     parser.add_argument('-p', '--path', help='specify path to save photos', type=decode_input,
                         default=path.join(path.dirname(path.abspath(__file__)), 'download/'))
     return parser
@@ -74,39 +76,52 @@ def download_photos(**kwargs):
         if not kwargs['source_is_user']:
             owner_id = '-{}'.format(owner_id)
 
-        albums = request_api('photos.getAlbums', params={'owner_id': owner_id})
+        raw_albums = request_api('photos.getAlbums', params={'owner_id': owner_id})
+        albums = {album['id']: album['title'] for album in raw_albums['items']}
 
-        if not kwargs['album']:
+        if not (kwargs['albums'] or kwargs['download_all']):
             print('Album list\n\nid\t\ttitle')
             print('-' * 80)
-            for album in albums['items']:
+            for album_id, album_title in albums.items():
                 try:
-                    print(u'{id}\t{title}'.format(**album))
+                    print(u'{}\t{}'.format(album_id, album_title))
                 except UnicodeEncodeError:
-                    print(u'{id}\tUNKNOWN TITLE'.format(**album))
+                    print(u'{}\tUNKNOWN TITLE'.format(album_id))
             return
 
+        existing_album_ids = albums.keys()
+
+        if kwargs['download_all']:
+            required_album_ids = existing_album_ids
+        else:
+            required_album_ids, invalid_album_ids = [], []
+            for album_id in kwargs['albums']:
+                if album_id in existing_album_ids:
+                    required_album_ids.append(album_id)
+                else:
+                    invalid_album_ids.append(album_id)
+
+            for album_id in invalid_album_ids:
+                print('Wrong album id {}'.format(album_id))
+
         queue = []
-        for down_album in kwargs['album']:
-            if any(down_album == album['id'] for album in albums['items']):
-                download_dir = get_download_dir(kwargs['path'], str(down_album))
+        for album_id in required_album_ids:
+            download_dir = get_download_dir(kwargs['path'], albums[album_id])
 
-                print(u'Album {} will be saved to {}'.format(down_album, download_dir))
+            print(u'Album {} will be saved to {}'.format(album_id, download_dir))
 
-                photos = request_api('photos.get', params={'owner_id': owner_id, 'album_id': down_album})
+            photos = request_api('photos.get', params={'owner_id': owner_id, 'album_id': album_id})
 
-                photos_count = photos['count']
-                pos_len = len(str(photos_count))
-                photo_suffixes = ['2560', '1280', '807', '604', '130', '75']
+            photos_count = photos['count']
+            pos_len = len(str(photos_count))
+            photo_suffixes = ['2560', '1280', '807', '604', '130', '75']
 
-                for pos, photo in enumerate(photos['items']):
-                    for suffix in photo_suffixes:
-                        key = 'photo_{}'.format(suffix)
-                        if key in photo:
-                            queue.append((pos, photo[key], pos_len, download_dir))
-                            break
-            else:
-                print('Wrong album id {}'.format(down_album))
+            for pos, photo in enumerate(photos['items']):
+                for suffix in photo_suffixes:
+                    key = 'photo_{}'.format(suffix)
+                    if key in photo:
+                        queue.append((pos, photo[key], pos_len, download_dir))
+                        break
 
         if queue:
             pool = multiprocessing.Pool()
