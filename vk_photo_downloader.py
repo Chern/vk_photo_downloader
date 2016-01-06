@@ -42,7 +42,7 @@ def create_parser():
 
 def get_download_dir(dir_path, subdir=None):
     abs_path = path.abspath(dir_path)
-    if not subdir is None:
+    if subdir is not None:
         abs_path = path.join(abs_path, subdir)
     if not path.exists(abs_path):
         makedirs(abs_path)
