@@ -7,7 +7,16 @@ import sys
 from os import path, makedirs
 
 API_URL = 'https://api.vk.com/method'
-API_VERSION = '5.5'
+API_VERSION = '5.42'
+
+SIZE_WEIGHTS = {
+    's': 1,
+    'm': 2,
+    'x': 3,
+    'y': 4,
+    'z': 5,
+    'w': 6
+}
 
 
 class VKException(Exception):
@@ -110,18 +119,15 @@ def download_photos(**kwargs):
 
             print(u'Album {} will be saved to {}'.format(album_id, download_dir))
 
-            photos = request_api('photos.get', params={'owner_id': owner_id, 'album_id': album_id})
+            photos = request_api('photos.get', params={'owner_id': owner_id, 'album_id': album_id, 'photo_sizes': 1})
 
             photos_count = photos['count']
             pos_len = len(str(photos_count))
-            photo_suffixes = ['2560', '1280', '807', '604', '130', '75']
 
-            for pos, photo in enumerate(photos['items']):
-                for suffix in photo_suffixes:
-                    key = 'photo_{}'.format(suffix)
-                    if key in photo:
-                        queue.append((pos, photo[key], pos_len, download_dir))
-                        break
+            for _id, photo in enumerate(photos['items']):
+                sizes = photo['sizes']
+                sizes.sort(key=lambda x: SIZE_WEIGHTS.get(x['type'], 0), reverse=True)
+                queue.append((_id, sizes[0]['src'], pos_len, download_dir))
 
         if queue:
             pool = multiprocessing.Pool()
