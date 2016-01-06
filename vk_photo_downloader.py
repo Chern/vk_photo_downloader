@@ -21,22 +21,18 @@ def request_api(method, params=None):
     response = requests.get('{}/{}'.format(API_URL, method), params=req_params)
     data = response.json()
     if 'error' in data:
-        raise VKException('Code - {error_code}. Message - {error_msg}'.format(
-            **data['error']))
+        raise VKException('Code - {error_code}. Message - {error_msg}'.format(**data['error']))
     return data['response']
 
 
 def create_parser():
     parser = argparse.ArgumentParser()
     parser.add_argument('owner', help='owner name or id', type=lambda x: x.decode(sys.getfilesystemencoding()))
-    parser.add_argument('-u', help='owner is user', action='store_true',
-                        dest='source_is_user')
+    parser.add_argument('-u', help='owner is user', action='store_true', dest='source_is_user')
     parser.add_argument('-a', '--album', nargs='*', type=int,
                         help='specify album ids to download. if it is empty, user albums list will be printed')
-    parser.add_argument('-p', '--path',
-                        help='specify path to save photos',
-                        default=path.join(path.dirname(path.abspath(__file__)),
-                                          'download/'))
+    parser.add_argument('-p', '--path', help='specify path to save photos',
+                        default=path.join(path.dirname(path.abspath(__file__)), 'download/'))
     return parser
 
 
@@ -92,10 +88,9 @@ def download_photos(**kwargs):
                 print('Downloading {}'.format(down_album))
                 download_dir = get_download_dir(kwargs['path'], str(down_album))
                 print('Saving to {}...'.format(download_dir))
-                photos = request_api(
-                    'photos.get',
-                    params={'owner_id': owner_id, 'album_id': down_album}
-                )
+
+                photos = request_api('photos.get', params={'owner_id': owner_id, 'album_id': down_album})
+
                 photos_count = photos['count']
                 pos_len = len(str(photos_count))
                 photo_suffixes = ['2560', '1280', '807', '604', '130', '75']
@@ -104,9 +99,7 @@ def download_photos(**kwargs):
                     for suffix in photo_suffixes:
                         key = 'photo_{}'.format(suffix)
                         if key in photo:
-                            queue.append(
-                                (pos, photo[key], pos_len, download_dir)
-                            )
+                            queue.append((pos, photo[key], pos_len, download_dir))
                             break
             else:
                 print('Wrong album id {}'.format(down_album))
