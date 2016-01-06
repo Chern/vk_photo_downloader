@@ -21,17 +21,21 @@ def request_api(method, params=None):
     response = requests.get('{}/{}'.format(API_URL, method), params=req_params)
     data = response.json()
     if 'error' in data:
-        raise VKException('Code - {error_code}. Message - {error_msg}'.format(**data['error']))
+        raise VKException(u'Code - {error_code}. Message - {error_msg}'.format(**data['error']))
     return data['response']
+
+
+def decode_input(value):
+    return value.decode(sys.getfilesystemencoding())
 
 
 def create_parser():
     parser = argparse.ArgumentParser()
-    parser.add_argument('owner', help='owner name or id', type=lambda x: x.decode(sys.getfilesystemencoding()))
+    parser.add_argument('owner', help='owner name or id', type=decode_input)
     parser.add_argument('-u', help='owner is user', action='store_true', dest='source_is_user')
     parser.add_argument('-a', '--album', nargs='*', type=int,
                         help='specify album ids to download. if it is empty, user albums list will be printed')
-    parser.add_argument('-p', '--path', help='specify path to save photos',
+    parser.add_argument('-p', '--path', help='specify path to save photos', type=decode_input,
                         default=path.join(path.dirname(path.abspath(__file__)), 'download/'))
     return parser
 
@@ -50,7 +54,7 @@ def downloader(bits):
     response = requests.get(url, stream=True)
     ext = url.split('.')[-1]
     pos = str(pos + 1).rjust(pos_len, '0')
-    file_name = '{}/{}.{}'.format(download_dir, pos, ext)
+    file_name = u'{}/{}.{}'.format(download_dir, pos, ext)
     with open(file_name, 'wb') as f:
         for chunk in response.iter_content(1024):
             f.write(chunk)
@@ -85,9 +89,9 @@ def download_photos(**kwargs):
         queue = []
         for down_album in kwargs['album']:
             if any(down_album == album['id'] for album in albums['items']):
-                print('Downloading {}'.format(down_album))
                 download_dir = get_download_dir(kwargs['path'], str(down_album))
-                print('Saving to {}...'.format(download_dir))
+
+                print(u'Album {} will be saved to {}'.format(down_album, download_dir))
 
                 photos = request_api('photos.get', params={'owner_id': owner_id, 'album_id': down_album})
 
